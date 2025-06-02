@@ -90,9 +90,10 @@ async function recomendarReceitas(req, res) {
           if (diasRestantes < menorDias) menorDias = diasRestantes;
         }
       }
-
-      const maxExtraIngredients = 3;
-      if ((totalIng - ingredients.length) > maxExtraIngredients) continue;
+      //Adicionar máximo de 3 ingredientes
+      const ingredientesEnviadosIds = ingredients.map(i => i.ingredient_id);
+      const extras = ingredientesReceita.filter(ing => !ingredientesEnviadosIds.includes(ing.ingredient_id)).length;
+      if (extras > maxExtraIngredients) continue;
 
       const ingredientMatch = matchCount / totalIng;
       const expirationPriority = menorDias < Infinity ? Math.max(0, 1 - menorDias / 30) : 0;
