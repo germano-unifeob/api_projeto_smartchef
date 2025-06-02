@@ -66,6 +66,7 @@ async function recomendarReceitas(req, res) {
 
     // 5. Calcular score com base nos ingredientes enviados
     const scoredReceitas = [];
+    const maxExtraIngredients = 3;
 
     for (const receita of receitas) {
       const ingredientesReceita = await db('recipe_ingredients as ri')
