@@ -142,11 +142,13 @@ class ReceitasController {
       }
   
       if (estilo_vida_id !== undefined && estilo_vida_id !== '') {
-        if (estilo_vida_id == 1) { // vegetariano
+        if (parseInt(estilo_vida_id) === 1) { // vegetariano
           const palavrasProibidas = ['beef', 'chicken', 'salmon', 'fish', 'pork', 'bacon', 'shrimp', 'ham', 'steak', 'turkey', 'sausage'];
           palavrasProibidas.forEach(palavra => {
             query.andWhereRaw(`LOWER(name) NOT LIKE ?`, [`%${palavra}%`]);
           });
+        } else if (parseInt(estilo_vida_id) === 0) { // 🥗 fit
+          query.andWhere('calories', '<=', 300);
         } else {
           query.andWhere('estilo_vida_id', estilo_vida_id);
         }
