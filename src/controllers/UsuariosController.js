@@ -186,7 +186,8 @@ class UsuariosController {
 
       return res.status(201).json({
         success: true,
-        message: 'Usuário cadastrado com sucesso!'
+        message: 'Usuário cadastrado com sucesso!',
+        user_id
       });
     } catch (err) {
       console.error(err);
