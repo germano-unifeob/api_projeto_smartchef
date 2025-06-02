@@ -92,7 +92,7 @@ async function recomendarReceitas(req, res) {
       }
 
       const maxExtraIngredients = 3;
-      if (Math.abs(totalIng - ingredients.length) > maxExtraIngredients) continue;
+      if ((totalIng - ingredients.length) > maxExtraIngredients) continue;
 
       const ingredientMatch = matchCount / totalIng;
       const expirationPriority = menorDias < Infinity ? Math.max(0, 1 - menorDias / 30) : 0;

@@ -155,7 +155,15 @@ class UsuariosController {
         await knex('user_allergies').insert(userAllergies);
       }
 
+<<<<<<< HEAD
       return res.status(201).json({ success: true, message: 'Usuário cadastrado com sucesso!' });
+=======
+      return res.status(201).json({
+        success: true,
+        message: 'Usuário cadastrado com sucesso!',
+        user_id
+      });
+>>>>>>> dev
     } catch (err) {
       console.error(err);
       return res.status(500).json({ success: false, message: 'Erro interno ao cadastrar usuário', error: err });
