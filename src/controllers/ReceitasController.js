@@ -166,6 +166,48 @@ class ReceitasController {
       res.status(500).json({ error: 'Erro ao buscar receitas com filtros.' });
     }
   }
+
+  
+  // GET /receitas/carnes?page=1&pageSize=10
+static async buscarReceitasCarnes(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const offset = (page - 1) * pageSize;
+
+    const palavrasChaveCarnes = [
+      'beef', 'chicken', 'pork', 'bacon', 'sausage',
+      'ham', 'steak', 'ribs', 'turkey', 'duck', 'lamb', 'meat'
+    ];
+
+    let query = knex('recipes')
+      .select([
+        'receita_id',
+        'name',
+        'description',
+        'ingredients',
+        'steps',
+        'minutes',
+        'calories'
+      ])
+      .limit(pageSize)
+      .offset(offset);
+
+    query.where(function () {
+      palavrasChaveCarnes.forEach((palavra, index) => {
+        const condition = `LOWER(ingredients) LIKE ?`;
+        if (index === 0) this.whereRaw(condition, [`%${palavra}%`]);
+        else this.orWhereRaw(condition, [`%${palavra}%`]);
+      });
+    });
+
+    const resultados = await query;
+    return res.json(resultados);
+  } catch (error) {
+    console.error('Erro ao buscar receitas com carnes:', error);
+    return res.status(500).json({ error: 'Erro ao buscar receitas com carnes.' });
+  }
+}  
   
   
 }

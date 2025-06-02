@@ -63,4 +63,6 @@ router.put('/usuarios/:id', UsuariosController.updateProfile);
 
 router.get('/receitas/com-filtros', ReceitasController.buscarComFiltros);
 
+router.get('/receitas/carnes', ReceitasController.buscarReceitasCarnes);
+
 module.exports = router;
