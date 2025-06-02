@@ -4,7 +4,10 @@ async function recomendarReceitas(req, res) {
   const { user_id, ingredients } = req.body;
 
   try {
-    // Obter perfil do usuário
+    const startTime = Date.now();
+    const tempoLimiteMs = 30000; // 30 segundos
+
+    // 1. Obter perfil do usuário
     const userQuery = await db('usuarios')
       .where('id', user_id)
       .select('estilo_vida_id', 'nivel_experiencia_id');
@@ -15,12 +18,15 @@ async function recomendarReceitas(req, res) {
 
     const user = userQuery[0];
 
-    // Obter alergias
+    // 2. Obter alergias do usuário
     const alergias = await db('user_allergies')
       .where('user_id', user_id)
       .pluck('ingredient_id');
 
-    const receitasQuery = db('recipes as r')
+    console.log('Alergias do usuário:', alergias);
+
+    // 3. Obter receitas compatíveis com estilo de vida e nível de experiência
+    let receitasQuery = db('recipes as r')
       .select(
         'r.receita_id',
         'r.name',
@@ -49,28 +55,33 @@ async function recomendarReceitas(req, res) {
 
     let receitas = await receitasQuery;
 
-    // Excluir receitas com ingredientes alérgicos
+    // 4. Excluir receitas com ingredientes alérgicos
     if (alergias.length > 0) {
       const receitasComAlergia = await db('recipe_ingredients')
         .whereIn('ingredient_id', alergias)
         .pluck('receita_id');
 
+      console.log('Receitas com alergias (a serem removidas):', receitasComAlergia);
       receitas = receitas.filter(r => !receitasComAlergia.includes(r.receita_id));
     }
 
+    // 5. Verificar se todas os ingredientes enviados estão presentes e calcular score
     const ingredientesEnviadosIds = ingredients.map(i => i.ingredient_id);
     const scoredReceitas = [];
 
     for (const receita of receitas) {
+      if (Date.now() - startTime > tempoLimiteMs) {
+        console.log('⏱ Tempo limite excedido. Interrompendo busca.');
+        break;
+      }
+
       const ingredientesReceita = await db('recipe_ingredients')
         .where('receita_id', receita.receita_id)
         .pluck('ingredient_id');
 
-      // Verifica se TODOS os ingredientes enviados estão na receita
       const contemTodos = ingredientesEnviadosIds.every(id => ingredientesReceita.includes(id));
       if (!contemTodos) continue;
 
-      // Cálculo de prioridade pela validade
       let menorDias = Infinity;
       for (const ing of ingredients) {
         if (ingredientesReceita.includes(ing.ingredient_id)) {
@@ -80,19 +91,16 @@ async function recomendarReceitas(req, res) {
       }
 
       const expirationPriority = menorDias < Infinity ? Math.max(0, 1 - menorDias / 30) : 0;
-      const totalScore = expirationPriority;
-
-      scoredReceitas.push({ ...receita, totalScore, total_ingredientes: ingredientesReceita.length });
+      scoredReceitas.push({ ...receita, totalScore: expirationPriority, total_ingredientes: ingredientesReceita.length });
     }
 
     scoredReceitas.sort((a, b) => a.total_ingredientes - b.total_ingredientes || b.totalScore - a.totalScore);
     const topReceitas = scoredReceitas.slice(0, 3);
 
     console.log('🔍 Receitas finais (com todos os ingredientes):', topReceitas.map(r => r.receita_id));
+    const statusCode = (Date.now() - startTime > tempoLimiteMs) ? 206 : 200;
+    res.status(statusCode).json({ receitas: topReceitas });
 
-    res.status(200).json({ receitas: topReceitas });
-
-    // Salvar recomendações
     setImmediate(async () => {
       try {
         for (const r of topReceitas) {
@@ -111,3 +119,35 @@ async function recomendarReceitas(req, res) {
     return res.status(500).json({ error: 'Erro ao recomendar receitas' });
   }
 }
+
+async function getRecomendacoes(req, res) {
+  const user_id = req.params.user_id;
+
+  try {
+    const receitas = await db('user_recipes as ur')
+      .join('recipes as r', 'r.receita_id', 'ur.receita_id')
+      .where('ur.user_id', user_id)
+      .orderBy('ur.data_sugestao', 'desc')
+      .select(
+        'r.receita_id',
+        'r.name',
+        'r.description',
+        'r.steps',
+        'r.ingredients',
+        'r.calories',
+        'r.minutes'
+      );
+
+    console.log("📦 Receitas retornadas pela API:", JSON.stringify(receitas, null, 2));
+    return res.status(200).json({ receitas });
+
+  } catch (err) {
+    console.error('Erro ao buscar recomendações:', err);
+    return res.status(500).json({ message: 'Erro ao buscar receitas' });
+  }
+}
+
+module.exports = {
+  recomendarReceitas,
+  getRecomendacoes
+};
